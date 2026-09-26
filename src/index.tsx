@@ -1,6 +1,7 @@
 import React from 'react';
 import type { PluginComponentProps } from './hs-plugin';
 import { hostFrameStyle } from './host-style';
+import { Icon, I, wxIcon } from './icons';
 import {
   CalEvent, Person, HourlyWeather, resolveSourceIds, selectTrips, shortPlace,
   weatherInfo, weatherAt, leaveBy, formatDuration, coordKey, townFromLocation, trafficLevel, TrafficLevel,
@@ -95,18 +96,10 @@ async function route(from: Geo, to: Geo, ev: CalEvent, mode: string): Promise<Ro
 }
 
 const LEVEL: Record<TrafficLevel, { color: string; label: string }> = {
-  clear: { color: '#16a34a', label: 'Traffic clear' },
-  moderate: { color: '#d97706', label: 'Moderate traffic' },
-  heavy: { color: '#dc2626', label: 'Heavy traffic' },
+  clear: { color: '#16a34a', label: 'Clear' },
+  moderate: { color: '#d97706', label: 'Moderate' },
+  heavy: { color: '#dc2626', label: 'Heavy' },
 };
-
-function Badge({ color, children }: { color: string; children: React.ReactNode }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3em', padding: '0.15em 0.6em', borderRadius: '999px', background: `${color}22`, color, fontWeight: 500, fontSize: '0.72em', whiteSpace: 'nowrap' }}>
-      <span style={{ width: '0.55em', height: '0.55em', borderRadius: '50%', background: color }} />{children}
-    </span>
-  );
-}
 
 export default function EventTrips(props: Props) {
   const { config, style } = props;
@@ -125,6 +118,7 @@ export default function EventTrips(props: Props) {
   const imperial = props.units === 'imperial';
   const tz = props.timezone;
   const hour12 = props.timeFormat === '24h' ? false : props.timeFormat === '12h' ? true : undefined;
+  const ink = (a: number) => `color-mix(in srgb, ${style.textColor || 'currentColor'} ${Math.round(a * 100)}%, transparent)`;
 
   const [now, setNow] = React.useState(() => new Date());
   const [tick, setTick] = React.useState(0);
@@ -189,34 +183,49 @@ export default function EventTrips(props: Props) {
   const deg = imperial ? '°F' : '°';
   const km = (m: number) => (imperial ? `${(m / 1609).toFixed(m < 16000 ? 1 : 0)} mi` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`);
   const townOf = (ev: CalEvent, d: TripData) => d.geo?.town || townFromLocation(ev.location!) || '';
+  const placeLine = (ev: CalEvent, d: TripData) => {
+    const p = shortPlace(ev.location!); const t = townOf(ev, d);
+    return t && t !== p ? `${p}, ${t}` : p;
+  };
 
   const root: React.CSSProperties = {
     ...hostFrameStyle(style as any),
     width: '100%', height: '100%', boxSizing: 'border-box',
-    display: 'flex', flexDirection: 'column', gap: '0.7em', overflow: 'hidden',
+    display: 'flex', flexDirection: 'column', overflow: 'hidden',
   };
+  const caps: React.CSSProperties = { fontSize: '0.65em', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.6 };
+  const rowBg = ink(0.06);
 
-  const wxChip = (d: TripData, ev: CalEvent, big = false) => {
+  const weather = (d: TripData, ev: CalEvent, large: boolean) => {
     const w = d.weather; if (!showWeather || !w) return null;
-    const info = weatherInfo(w.code); const town = townOf(ev, d);
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4em', padding: big ? '0.45em 0.8em' : '0.25em 0.6em', borderRadius: '0.8em', background: 'rgba(127,127,127,0.12)', fontSize: big ? '0.95em' : '0.78em', whiteSpace: 'nowrap' }}>
-        <span style={{ fontSize: '1.4em', lineHeight: 1 }} title={info.label}>{info.icon}</span>
-        <span style={{ fontWeight: 600 }}>{Math.round(w.temp)}{deg}</span>
-        {w.pop != null && w.pop >= 30 && <span style={{ opacity: 0.75 }}>💧{w.pop}%</span>}
-        {town && <span style={{ opacity: 0.7 }}>· {town}</span>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45em', flexShrink: 0 }}>
+        <Icon d={wxIcon(w.code)} size={large ? '1.9em' : '1.3em'} stroke={1.6} style={{ opacity: 0.8 }} />
+        <div style={{ lineHeight: 1.15, textAlign: 'left' }}>
+          <div style={{ fontSize: large ? '1.25em' : '0.85em', fontWeight: 600 }}>{Math.round(w.temp)}{deg}</div>
+          <div style={{ fontSize: large ? '0.6em' : '0.55em', opacity: 0.45, whiteSpace: 'nowrap' }}>
+            {townOf(ev, d)}{w.pop != null && w.pop >= 30 ? ` · ${w.pop}% rain` : ''}
+          </div>
+        </div>
       </div>
     );
   };
 
+  const header = (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25em' }}>
+      <h2 style={{ margin: 0, fontSize: '1.1em', fontWeight: 600 }}>{title || 'Where to next'}</h2>
+      <span style={{ fontSize: '0.65em', opacity: 0.35 }}>{trips.length ? `${trips.length} coming up` : ''}</span>
+    </div>
+  );
+  const divider = <div style={{ height: 1, background: ink(0.08), margin: '0.35em 0 0.7em' }} />;
+
   if (trips.length === 0) {
     return (
       <div style={root}>
-        {title && <div style={{ fontSize: '1.1em', fontWeight: 600 }}>{title}</div>}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', opacity: 0.6, gap: '0.4em' }}>
-          <div style={{ fontSize: '2.4em' }}>🗺️</div>
-          <div style={{ fontWeight: 500 }}>Nowhere to be in the next {daysAhead} days</div>
-          <div style={{ fontSize: '0.75em', maxWidth: '28em' }}>Add a location to a calendar event and it shows up here with the weather there and when to leave.</div>
+        {header}{divider}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '0.4em' }}>
+          <Icon d={I.pin} size="2em" stroke={1.5} style={{ opacity: 0.35 }} />
+          <div style={{ fontSize: '0.8em', opacity: 0.35 }}>Nowhere to be in the next {daysAhead} days</div>
         </div>
       </div>
     );
@@ -231,91 +240,106 @@ export default function EventTrips(props: Props) {
   const inProgress = nStart.getTime() <= now.getTime();
   const lvl = nr ? trafficLevel(nr.seconds, nr.delay) : null;
   const urgency = minsToLeave == null ? accent : minsToLeave <= 5 ? '#dc2626' : minsToLeave <= 20 ? '#d97706' : accent;
-  const leaveHeadline = inProgress ? 'Happening now'
-    : minsToLeave == null ? (next.allDay ? 'All day' : `Starts ${fmtTime(nStart)}`)
+  const leaveLabel = inProgress ? 'Happening now'
+    : minsToLeave == null ? null
     : minsToLeave <= 0 ? 'Leave now'
     : minsToLeave < 60 ? `Leave in ${minsToLeave} min`
     : `Leave at ${fmtTime(leave!)}`;
-  // progress toward leave time over the last 2 hours
   const pct = minsToLeave == null ? 0 : Math.max(0, Math.min(1, 1 - minsToLeave / 120));
 
   return (
     <div style={root}>
-      {title && (
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: '1.05em', fontWeight: 600 }}>{title}</div>
-          <div style={{ fontSize: '0.65em', opacity: 0.55 }}>{trips.length} coming up</div>
-        </div>
-      )}
+      {header}{divider}
 
-      {/* Hero: the next trip */}
-      <div style={{ borderRadius: '1em', padding: '0.9em 1em', background: `${accent}1f`, display: 'flex', flexDirection: 'column', gap: '0.5em', borderLeft: `0.35em solid ${next.calendarColor || accent}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.8em' }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '0.7em', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.65 }}>
-              {fmtDay(nStart)} · {next.allDay ? 'All day' : fmtTime(nStart)}
-            </div>
-            <div style={{ fontSize: '1.2em', fontWeight: 600, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{next.title}</div>
-            <div style={{ fontSize: '0.8em', opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              📍 {shortPlace(next.location!)}{townOf(next, nd) && shortPlace(next.location!) !== townOf(next, nd) ? `, ${townOf(next, nd)}` : ''}
-            </div>
-          </div>
-          {wxChip(nd, next, true)}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.6em', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '2.3em', fontWeight: 700, lineHeight: 1, color: urgency, letterSpacing: '-0.02em' }}>{leaveHeadline}</div>
-          {nr && leave && !inProgress && (
-            <div style={{ fontSize: '0.8em', opacity: 0.8, textAlign: 'right' }}>arrive {fmtTime(new Date(leave.getTime() + nr.seconds * 1000))}<br />{buffer ? `${buffer} min early` : ''}</div>
-          )}
-        </div>
-
-        {nr && !inProgress && (
-          <div style={{ height: '0.35em', borderRadius: '999px', background: 'rgba(127,127,127,0.2)', overflow: 'hidden' }}>
-            <div style={{ width: `${pct * 100}%`, height: '100%', background: urgency, transition: 'width 1s' }} />
-          </div>
-        )}
-
-        {showTraffic && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.7em', flexWrap: 'wrap', fontSize: '0.9em' }}>
-            {nr ? (
-              <>
-                <span style={{ fontWeight: 600 }}>🚗 {formatDuration(nr.seconds)}</span>
-                <span style={{ opacity: 0.65 }}>{km(nr.meters)}</span>
-                {lvl && <Badge color={LEVEL[lvl].color}>{nr.delay >= 60 ? `+${formatDuration(nr.delay)} · ` : ''}{LEVEL[lvl].label}</Badge>}
-              </>
-            ) : next.allDay ? null : (
-              <span style={{ opacity: 0.55, fontSize: '0.85em' }}>{noKey ? 'Add a TomTom key for drive times' : 'Checking traffic…'}</span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Later trips */}
-      {rest.length > 0 && <div style={{ fontSize: '0.65em', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.55, marginTop: '0.2em' }}>Later</div>}
-      {rest.map((ev) => {
-        const d = data[ev.id] ?? {};
-        const st = new Date(ev.start);
-        const r = d.route;
-        const l = r ? leaveBy(ev, r.seconds, buffer) : null;
-        const lv = r ? trafficLevel(r.seconds, r.delay) : null;
-        return (
-          <div key={ev.id} style={{ display: 'grid', gridTemplateColumns: '5.4em 1fr auto', gap: '0.7em', alignItems: 'center', padding: '0.5em 0.7em', borderRadius: '0.8em', background: 'rgba(127,127,127,0.09)', fontSize: '0.88em' }}>
-            <div>
-              <div style={{ fontSize: '0.72em', fontWeight: 600, opacity: 0.6, textTransform: 'uppercase' }}>{fmtDay(st)}</div>
-              <div style={{ fontWeight: 600 }}>{ev.allDay ? 'All day' : fmtTime(st)}</div>
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</div>
-              <div style={{ fontSize: '0.8em', display: 'flex', gap: '0.6em', alignItems: 'center', flexWrap: 'wrap', opacity: 0.85 }}>
-                {r && l ? <><span>Leave {fmtTime(l)}</span><span style={{ opacity: 0.7 }}>🚗 {formatDuration(r.seconds)}</span>{lv && lv !== 'clear' && <Badge color={LEVEL[lv].color}>+{formatDuration(r.delay)}</Badge>}</>
-                  : <span style={{ opacity: 0.7 }}>📍 {shortPlace(ev.location!)}</span>}
+      <div style={{ display: 'flex', gap: '0.7em', padding: '0.8em 0.9em', borderRadius: '0.6em', background: rowBg }}>
+        <div style={{ width: 4, borderRadius: 4, background: next.calendarColor || accent, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.55em' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.8em' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={caps}>{fmtDay(nStart)} · {next.allDay ? 'All day' : fmtTime(nStart)}</div>
+              <div style={{ fontSize: '1em', fontWeight: 600, marginTop: '0.15em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{next.title}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3em', fontSize: '0.72em', opacity: 0.6, marginTop: '0.2em', minWidth: 0 }}>
+                <Icon d={I.pin} size="1em" /><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{placeLine(next, nd)}</span>
               </div>
             </div>
-            {wxChip(d, ev)}
+            {weather(nd, next, true)}
           </div>
-        );
-      })}
+
+          {(leaveLabel || (showTraffic && !next.allDay)) && <div style={{ height: 1, background: ink(0.08) }} />}
+
+          {leaveLabel && (
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.6em' }}>
+              <div style={{ fontSize: '1.7em', fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.1, color: urgency }}>{leaveLabel}</div>
+              {nr && leave && !inProgress && (
+                <div style={{ fontSize: '0.65em', opacity: 0.45, textAlign: 'right', whiteSpace: 'nowrap' }}>arrive {fmtTime(new Date(leave.getTime() + nr.seconds * 1000))}{buffer ? ` · ${buffer} min early` : ''}</div>
+              )}
+            </div>
+          )}
+          {nr && !inProgress && (
+            <div style={{ height: '0.22em', borderRadius: 999, background: ink(0.08), overflow: 'hidden' }}>
+              <div style={{ width: `${pct * 100}%`, height: '100%', background: urgency, transition: 'width 1s' }} />
+            </div>
+          )}
+          {showTraffic && !next.allDay && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.9em', fontSize: '0.75em', flexWrap: 'wrap' }}>
+              {nr ? (
+                <>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35em', fontWeight: 500 }}><Icon d={I.car} size="1.15em" style={{ opacity: 0.7 }} />{formatDuration(nr.seconds)}</span>
+                  <span style={{ opacity: 0.45 }}>{km(nr.meters)}</span>
+                  {lvl && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35em', padding: '0.15em 0.55em', borderRadius: '0.4em', fontSize: '0.9em', fontWeight: 500, color: LEVEL[lvl].color, background: `${LEVEL[lvl].color}15` }}>
+                      <span style={{ width: '0.5em', height: '0.5em', borderRadius: '50%', background: LEVEL[lvl].color }} />
+                      {LEVEL[lvl].label} traffic{nr.delay >= 60 ? ` · +${formatDuration(nr.delay)}` : ''}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span style={{ opacity: 0.35 }}>{noKey ? 'Add a TomTom key for drive times' : 'Checking traffic…'}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {rest.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em', margin: '0.9em 0 0.45em' }}>
+          <span style={caps}>Later</span>
+          <div style={{ flex: 1, height: 1, background: ink(0.08) }} />
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25em', minHeight: 0, overflow: 'hidden' }}>
+        {rest.map((ev) => {
+          const d = data[ev.id] ?? {};
+          const st = new Date(ev.start);
+          const r = d.route;
+          const l = r ? leaveBy(ev, r.seconds, buffer) : null;
+          const lv = r ? trafficLevel(r.seconds, r.delay) : null;
+          return (
+            <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: '0.7em', padding: '0.5em 0.7em', borderRadius: '0.5em', background: rowBg }}>
+              <div style={{ width: 3, alignSelf: 'stretch', borderRadius: 3, background: ev.calendarColor || accent, flexShrink: 0 }} />
+              <div style={{ width: '4.6em', flexShrink: 0, lineHeight: 1.2 }}>
+                <div style={{ ...caps, fontSize: '0.55em' }}>{fmtDay(st)}</div>
+                <div style={{ fontSize: '0.8em', fontWeight: 600 }}>{ev.allDay ? 'All day' : fmtTime(st)}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
+                <div style={{ fontSize: '0.85em', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</div>
+                <div style={{ fontSize: '0.65em', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '0.5em', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                  {r && l ? (
+                    <>
+                      <span>Leave {fmtTime(l)}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25em' }}><Icon d={I.car} size="1.1em" />{formatDuration(r.seconds)}</span>
+                      {lv && lv !== 'clear' && <span style={{ color: LEVEL[lv].color, opacity: 1 }}>+{formatDuration(r.delay)}</span>}
+                    </>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25em', overflow: 'hidden', textOverflow: 'ellipsis' }}><Icon d={I.pin} size="1em" />{shortPlace(ev.location!)}</span>
+                  )}
+                </div>
+              </div>
+              {weather(d, ev, false)}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
