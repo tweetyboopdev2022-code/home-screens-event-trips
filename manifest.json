@@ -1,0 +1,53 @@
+{
+  "id": "event-trips",
+  "name": "Event Trips",
+  "version": "1.2.0",
+  "description": "Upcoming calendar events that have a location, with the forecast there at that time and the drive time from home (live traffic via TomTom).",
+  "author": "Tanya",
+  "license": "MIT",
+  "minAppVersion": "1.7.1",
+  "moduleType": "event-trips",
+  "category": "Travel",
+  "icon": "Navigation",
+  "defaultConfig": {
+    "title": "Where to next",
+    "personName": "Vince",
+    "sourceIds": "",
+    "daysAhead": 7,
+    "maxEvents": 5,
+    "bufferMinutes": 10,
+    "travelMode": "car",
+    "originAddress": "",
+    "showWeather": true,
+    "showTraffic": true,
+    "accentColor": "#059669",
+    "refreshIntervalMs": 600000
+  },
+  "defaultSize": { "w": 1000, "h": 700 },
+  "defaultStyle": { "fontSize": 26, "padding": 28, "borderRadius": 28 },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string", "title": "Title", "description": "Leave empty for no title.", "ui:widget": "text", "ui:group": "Content" },
+      "personName": { "type": "string", "title": "Whose calendar", "description": "A person's name from Settings → Calendar → People. Leave empty to use every calendar.", "ui:widget": "text", "ui:group": "Content" },
+      "sourceIds": { "type": "string", "title": "Calendar IDs (optional)", "description": "Comma-separated calendar IDs. Overrides the person above.", "ui:widget": "text", "ui:group": "Content" },
+      "daysAhead": { "type": "number", "title": "Days ahead", "minimum": 1, "maximum": 14, "ui:widget": "slider", "ui:step": 1, "ui:group": "Content" },
+      "maxEvents": { "type": "number", "title": "Most trips shown", "minimum": 1, "maximum": 10, "ui:widget": "slider", "ui:step": 1, "ui:group": "Content" },
+      "showWeather": { "type": "boolean", "title": "Show weather at the destination", "ui:widget": "toggle", "ui:group": "Weather & traffic" },
+      "showTraffic": { "type": "boolean", "title": "Show drive time and leave-by", "ui:widget": "toggle", "ui:group": "Weather & traffic" },
+      "travelMode": { "type": "string", "title": "Travel mode", "enum": ["car", "bicycle", "pedestrian"], "enumLabels": ["Car", "Bike", "Walk"], "ui:widget": "select", "ui:group": "Weather & traffic" },
+      "bufferMinutes": { "type": "number", "title": "Extra minutes before leaving", "minimum": 0, "maximum": 45, "ui:widget": "slider", "ui:step": 5, "ui:group": "Weather & traffic" },
+      "originAddress": { "type": "string", "title": "Start from (optional)", "description": "Leave empty to use the home location from Settings.", "ui:widget": "text", "ui:group": "Weather & traffic" },
+      "accentColor": { "type": "string", "title": "Accent colour", "ui:widget": "color", "ui:group": "Look" },
+      "refreshIntervalMs": { "type": "number", "title": "Refresh (ms)", "minimum": 60000, "maximum": 3600000, "ui:widget": "slider", "ui:step": 60000, "ui:group": "Look" }
+    }
+  },
+  "exports": { "component": "default" },
+  "dataRequirements": ["calendar", "location"],
+  "prefetchUrl": null,
+  "secrets": [
+    { "key": "tomtom_key", "label": "TomTom API key", "description": "Free key from developer.tomtom.com (2,500 requests/day on the free tier). Needed for drive times; weather works without it.", "required": false, "placeholder": "Your TomTom key" }
+  ],
+  "allowedDomains": ["api.tomtom.com", "api.open-meteo.com", "nominatim.openstreetmap.org"],
+  "permissions": ["network", "secrets", "storage"]
+}
