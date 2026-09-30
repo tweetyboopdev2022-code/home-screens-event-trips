@@ -344,14 +344,14 @@ export default function EventTrips(props: Props) {
   );
 }
 
-/** Always-on provider: publishes `hasTrip` = "yes" | "no" so the Trips block can appear only when
+/** Always-on provider: publishes `has_trip` = "yes" | "no" so the Trips block can appear only when
  *  someone has a drivable event coming up (plugin settings: personName, daysAhead). */
 export function StateProvider({ demandedKeys, settings }: { demandedKeys: string[]; settings: Record<string, unknown> }) {
-  const wants = demandedKeys.includes('hasTrip');
+  const wants = demandedKeys.includes('has_trip');
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => {
     const hs = (window as any).__HS_SDK__;
-    if (!wants) { hs?.clearState?.('event-trips', 'hasTrip'); return; }
+    if (!wants) { hs?.clearState?.('event-trips', 'has_trip'); return; }
     const id = setInterval(() => setTick((t) => t + 1), 600000);
     return () => clearInterval(id);
   }, [wants]);
@@ -370,7 +370,7 @@ export function StateProvider({ demandedKeys, settings }: { demandedKeys: string
         const events = (Array.isArray(cal) ? cal : cal.events ?? []) as CalEvent[];
         const ids = resolveSourceIds(cfg.settings?.calendar?.people, person, '');
         const n = selectTrips(events, ids, now, days, 5).length;
-        if (!dead) (window as any).__HS_SDK__?.publishState?.('event-trips', 'hasTrip', n ? 'yes' : 'no');
+        if (!dead) (window as any).__HS_SDK__?.publishState?.('event-trips', 'has_trip', n ? 'yes' : 'no');
       } catch { /* leave the last value */ }
     })();
     return () => { dead = true; };
