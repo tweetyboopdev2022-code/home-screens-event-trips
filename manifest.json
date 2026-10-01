@@ -1,7 +1,7 @@
 {
   "id": "event-trips",
   "name": "Event Trips",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Upcoming calendar events that have a location, with the forecast there at that time and the drive time from home (live traffic via TomTom).",
   "author": "Tanya",
   "license": "MIT",

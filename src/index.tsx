@@ -368,7 +368,13 @@ export function StateProvider({ demandedKeys, settings }: { demandedKeys: string
           fetch(`/api/calendar?timeMin=${encodeURIComponent(now.toISOString())}&timeMax=${encodeURIComponent(new Date(now.getTime() + days * 86400000).toISOString())}`).then((r) => r.json()),
         ]);
         const events = (Array.isArray(cal) ? cal : cal.events ?? []) as CalEvent[];
-        const ids = resolveSourceIds(cfg.settings?.calendar?.people, person, '');
+        let people = cfg.settings?.calendar?.people as Person[] | undefined;
+        if (!people?.length) {   // newer Home Screens: members in /api/family, calendars in personSources[id]
+          const f = await fetch('/api/family').then((r) => r.json()).catch(() => ({ members: [] }));
+          const src = (cfg.settings?.calendar?.personSources ?? {}) as Record<string, string[]>;
+          people = (f.members ?? []).map((m: any) => ({ name: m.name, sourceIds: src[m.id] ?? [] }));
+        }
+        const ids = resolveSourceIds(people, person, '');
         const n = selectTrips(events, ids, now, days, 5).length;
         if (!dead) (window as any).__HS_SDK__?.publishState?.('event-trips', 'has_trip', n ? 'yes' : 'no');
       } catch { /* leave the last value */ }
